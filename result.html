@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Follower Chain Result</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    #loading { color: blue; font-size: 18px; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Follower Chain Result</h1>
+  <div id="loading">Loading...</div>
+  <div id="result"></div>
+
+  <script>
+    const API_BASE = 'https://Scratch2033.pythonanywhere.com'; // Replace with your real API endpoint
+    const CACHE_ENDPOINT = '/cache.php';
+
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function fetchFollowers(username) {
+      // First, try cache
+      try {
+        const cached = await fetch(`${CACHE_ENDPOINT}?username=${username}`);
+        const cacheData = await cached.json();
+        if (cacheData.followers && Array.isArray(cacheData.followers)) {
+          console.log(`Using cached followers for ${username}`);
+          return cacheData.followers;
+        }
+      } catch (e) {
+        console.warn('Cache error:', e);
+      }
+
+      // Then fallback to API
+      try {
+        const res = await fetch(`${API_BASE}/getfollowers-all/${username}`);
+        const data = await res.json();
+        const followers = data.map(u => u.username);
+
+        // Store in cache
+        await fetch(CACHE_ENDPOINT, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, followers })
+        });
+
+        return followers;
+      } catch (err) {
+        console.error(`Failed to fetch from API for ${username}:`, err);
+        return [];
+      }
+    }
+
+    async function fetchFollowerChain(start, end, findAll) {
+      document.getElementById('loading').style.display = 'block';
+      const visited = new Set();
+      const queue = [[start]];
+      const allChains = [];
+
+      while (queue.length > 0) {
+        const currentChain = queue.shift();
+        const currentUser = currentChain[currentChain.length - 1];
+
+        if (visited.has(currentUser)) continue;
+        visited.add(currentUser);
+
+        const followers = await fetchFollowers(currentUser);
+
+        for (const follower of followers) {
+          const newChain = [...currentChain, follower];
+          if (follower.toLowerCase() === end.toLowerCase()) {
+            allChains.push(newChain);
+            if (!findAll) return displayChains(allChains);
+          } else {
+            queue.push(newChain);
+          }
+        }
+
+        await delay(1000);
+      }
+
+      displayChains(allChains);
+    }
+
+    function displayChains(chains) {
+      document.getElementById('loading').style.display = 'none';
+      const result = document.getElementById('result');
+
+      if (chains.length === 0) {
+        result.innerHTML = "<p>No chains found.</p>";
+        return;
+      }
+
+      let html = "<h2>Chains:</h2><ul>";
+      for (const chain of chains) {
+        html += `<li>${chain.join(' → ')}</li>`;
+      }
+      html += "</ul>";
+      result.innerHTML = html;
+    }
+
+    function getParam(key) {
+      return new URLSearchParams(window.location.search).get(key);
+    }
+
+    async function main() {
+      const start = getParam('start');
+      const end = getParam('end');
+      const findAll = getParam('all') === '1';
+
+      if (!start || !end) {
+        document.getElementById('loading').textContent = 'Missing start or end parameter in URL.';
+        return;
+      }
+
+      await fetchFollowerChain(start, end, findAll);
+    }
+
+    window.onload = main;
+  </script>
+</body>
+</html>
