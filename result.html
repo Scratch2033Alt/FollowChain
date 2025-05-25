@@ -15,38 +15,24 @@
   <div id="result"></div>
 
   <script>
-    const API_BASE = 'https://Scratch2033.pythonanywhere.com'; // Replace with your real API endpoint
-    const CACHE_ENDPOINT = '/cache.php';
+    const API_BASE = 'https://Scratch2033.pythonanywhere.com'; // Your API endpoint
+    // Removed: const CACHE_ENDPOINT = '/cache.php';
 
     function delay(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
     }
 
     async function fetchFollowers(username) {
-      // First, try cache
-      try {
-        const cached = await fetch(`${CACHE_ENDPOINT}?username=${username}`);
-        const cacheData = await cached.json();
-        if (cacheData.followers && Array.isArray(cacheData.followers)) {
-          console.log(`Using cached followers for ${username}`);
-          return cacheData.followers;
-        }
-      } catch (e) {
-        console.warn('Cache error:', e);
-      }
+      // Removed: Cache fetching logic
 
-      // Then fallback to API
+      // Fallback to API (now primary fetch)
       try {
         const res = await fetch(`${API_BASE}/getfollowers-all/${username}`);
         const data = await res.json();
+        // The backend response is an array of objects, and you want the 'username' from each object
         const followers = data.map(u => u.username);
 
-        // Store in cache
-        await fetch(CACHE_ENDPOINT, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, followers })
-        });
+        // Removed: Store in cache logic
 
         return followers;
       } catch (err) {
@@ -80,7 +66,7 @@
           }
         }
 
-        await delay(1000);
+        await delay(1000); // This delay is still present and could slow down the search.
       }
 
       displayChains(allChains);
