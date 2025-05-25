@@ -23,18 +23,20 @@
     }
 
     async function fetchFollowers(username) {
-      // Removed: Cache fetching logic
-
-      // Fallback to API (now primary fetch)
       try {
         const res = await fetch(`${API_BASE}/getfollowers-all/${username}`);
-        const data = await res.json();
-        // The backend response is an array of objects, and you want the 'username' from each object
-        const followers = data.map(u => u.username);
+        const apiResponse = await res.json(); // Renamed to clarify it's the raw API response
 
-        // Removed: Store in cache logic
+        // Assuming API_BASE/getfollowers-all/ returns an array containing a single array of user objects
+        // E.g., [[{user1}, {user2}]]
+        if (apiResponse && Array.isArray(apiResponse) && apiResponse.length > 0 && Array.isArray(apiResponse[0])) {
+            const followers = apiResponse[0].map(u => u.username); // Access the first element (the inner array)
+            return followers;
+        } else {
+            console.warn(`Unexpected API response structure for ${username}:`, apiResponse);
+            return []; // Return empty array if structure is unexpected
+        }
 
-        return followers;
       } catch (err) {
         console.error(`Failed to fetch from API for ${username}:`, err);
         return [];
